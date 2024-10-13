@@ -28,3 +28,36 @@
 {"type": "invalid_request_error", "code": null, "message": "Error committing input audio buffer: the buffer is empty.", "param": null, "event_id": null}
 {"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
 {"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": "invalid_type", "message": "Invalid type for 'session.tools': expected an array of function definitions, but got a string instead.", "param": "session.tools", "event_id": null}
+{"type": "invalid_request_error", "code": "missing_required_parameter", "message": "Missing required parameter: 'session.tools[0].name'.", "param": "session.tools[0].name", "event_id": null}
+{"type": "invalid_request_error", "code": "missing_required_parameter", "message": "Missing required parameter: 'session.tools[0].type'.", "param": "session.tools[0].type", "event_id": null}
+{"type": "invalid_request_error", "code": "unknown_parameter", "message": "Unknown parameter: 'session.tools[0].strict'.", "param": "session.tools[0].strict", "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": "session_expired", "message": "Your session hit the maximum duration of 15 minutes.", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": "session_expired", "message": "Your session hit the maximum duration of 15 minutes.", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": "session_expired", "message": "Your session hit the maximum duration of 15 minutes.", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": null, "message": "Conversation already has an active response", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": "session_expired", "message": "Your session hit the maximum duration of 15 minutes.", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": "session_expired", "message": "Your session hit the maximum duration of 15 minutes.", "param": null, "event_id": null}
+{"type": "invalid_request_error", "code": "session_expired", "message": "Your session hit the maximum duration of 15 minutes.", "param": null, "event_id": null}
