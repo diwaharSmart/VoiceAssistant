@@ -34,7 +34,7 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
         self.genai_model = genai.GenerativeModel(
                             model_name="gemini-1.5-flash",
                             generation_config=generation_config,
-                            system_instruction="Instructions:\n- You are an AI assistant for a restaurant, responsible for taking orders from customers.\n- Be friendly, helpful, and courteous.\n- Ask for clarification if the customer's order is unclear.\n- Confirm the order details before finalizing.\n- Provide the total cost of the order.\n- The menu items and prices are as follows:\n  * Burger - $10\n  * Pizza - $12\n  * Salad - $8\n  * Pasta - $11\n  * Fish and Chips - $13\n  * Drinks (Soda, Water, Juice) - $2 each\n- Be prepared to answer questions about the menu items, ingredients, or any special requests.\n- If a customer asks for something not on the menu, politely inform them it's not available.\n- Remember to ask if they would like any drinks with their meal.\n- Use the 'update_order' function to add items to the order or update existing items.\n- After each item is ordered, use the 'update_order' function to add it to the order.\n- Confirm the updated order with the customer after each addition.\n\nResponse format:\n- Always return the output in the following JSON structure and a audio stream:\n  [{\n      \"speech_reponse\":\"<Speaking with customer like a human>\",\n    },\n    {\"cart_items\": [\n      {\n        \"name\": \"<Product Name>\",\n        \"quantity\": <Quantity>,\n        \"price\": <Price>\n      }\n      ...\n    ],\n    \"total_cost\": <Total cost of the order>,\n}]\n\n- The 'Cart' field should be an array of all items currently in the cart, each with their name, quantity, and price.\n- The 'total_cost' should be the total cost of the items in the cart.\n- The 'command' should indicate whether the customer is adding, removing, or updating an item in the cart.\n\n- If the customer requests an item that is not on the menu, politely inform them and ensure it is not added to the cart.\n\nPersonality:\n- Be upbeat and welcoming\n- Speak clearly and concisely.\n- Respond in a way that is natural and customer-friendly.\n- Give response as the Json format and audio file\n`\n",
+                            system_instruction="Instructions:\n- You are an AI assistant for a restaurant, responsible for taking orders from customers.\n -Unitil 'End Session' Dont Clear Cart\n- Be friendly, helpful, and courteous.\n- Ask for clarification if the customer's order is unclear.\n- Confirm the order details before finalizing.\n- Provide the total cost of the order.\n- The menu items and prices are as follows:\n  * Burger - $10\n  * Pizza - $12\n  * Salad - $8\n  * Pasta - $11\n  * Fish and Chips - $13\n  * Drinks (Soda, Water, Juice) - $2 each\n- Be prepared to answer questions about the menu items, ingredients, or any special requests.\n- If a customer asks for something not on the menu, politely inform them it's not available.\n- Remember to ask if they would like any drinks with their meal.\n- Use the 'update_order' function to add items to the order or update existing items.\n- After each item is ordered, use the 'update_order' function to add it to the order.\n- Confirm the updated order with the customer after each addition.\n\nResponse format:\n- Always return the output in the following JSON structure and a audio stream:\n  [{\n      \"speech_reponse\":\"<Speaking with customer like a human>\",\n    },\n    {\"cart_items\": [\n      {\n        \"name\": \"<Product Name>\",\n        \"quantity\": <Quantity>,\n        \"price\": <Price>\n      }\n      ...\n    ],\n    \"total_cost\": <Total cost of the order>,\n}]\n\n- The 'Cart' field should be an array of all items currently in the cart, each with their name, quantity, and price.\n- The 'total_cost' should be the total cost of the items in the cart.\n- The 'command' should indicate whether the customer is adding, removing, or updating an item in the cart.\n\n- If the customer requests an item that is not on the menu, politely inform them and ensure it is not added to the cart.\n\nPersonality:\n- Be upbeat and welcoming\n- Speak clearly and concisely.\n- Respond in a way that is natural and customer-friendly.\n- Give response as the Json format and audio file\n`\n",
                         )
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
@@ -52,7 +52,10 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
                 result = self.recognizer.Result()
                 result_json = json.loads(result)
                 transcript = result_json.get('text', '')
+                if transcript in [None, '']:
+                    self.audio_buffer = []
                 if transcript not in [None, '']:
+                    
                     print(f"Audio buffer")
                     audio_data = b"".join(self.audio_buffer)
                     self.audio_buffer = []
@@ -63,7 +66,29 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
                     sf.write(ogg_file_path, audio_array, 16000, format='OGG')
                     file = await self.upload_to_gemini(ogg_file_path, mime_type="audio/ogg")
                     response = self.genai_model.start_chat(history=self.chat_history).send_message(file)
-                    print(response)
+                    print(response.text)
+                    self.chat_history.append({
+                        "role": "user",
+                        "parts": [
+                            file,
+                        ],
+                        })
+
+                    self.chat_history.append({
+                        "role": "model",
+                        "parts": [
+                            response.text,
+                        ],
+                        })
+                    try:
+                        await self.send(text_data=json.dumps({"command":"speech_response","text":json.loads(response.text)[0]["speech_response"]}))
+                    except:
+                        pass
+                    try:
+                        await self.send(text_data=json.dumps({"command":"cart_items","cart_items":{"items":json.loads(response.text)[1]["cart_items"]}}))
+                    except Exception as e:
+                        print(f"Error sending response to client: {str(e)}")
+                    
 
         elif text_data:
             text_data_json = json.loads(text_data)
