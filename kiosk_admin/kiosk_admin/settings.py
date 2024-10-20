@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,18 +25,23 @@ SECRET_KEY = 'django-insecure-fz$c2=!cw3m0n+vw6o1h2d1h(k=(l8-6uw482p(n$%v3o!85bf
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
+    'realtime',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    'base',
+    
 ]
 
 MIDDLEWARE = [
@@ -67,7 +72,17 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'kiosk_admin.wsgi.application'
+# WSGI_APPLICATION = 'kiosk_admin.wsgi.application'
+ASGI_APPLICATION = "kiosk_admin.asgi.application"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
 
 
 # Database
@@ -115,9 +130,28 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+
+# Directory where static files will be collected
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Root directory for static files after running collectstatic
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Media files (uploaded by users)
+MEDIA_URL = '/media/'
+
+# Root directory for media files
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+GENAI_API_KEY =  'AIzaSyBYXaUKjFNEwH7gAaAtTS_uvwqcXt1n31I'
+OPEN_AI_KEY    =  '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'

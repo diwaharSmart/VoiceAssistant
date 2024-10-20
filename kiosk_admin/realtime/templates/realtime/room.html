@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Realtime Room</title>
+    <!-- Include FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        /* Style for the rounded mic button */
+        #mic-start, #mic-stop {
+            border: none;
+            color: white;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            padding: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        #mic-stop {
+            background-color: #f44336; /* Red for stop */
+        }
+
+        /* Style the background when recording starts */
+        body.recording {
+            background-color: #ffeb3b; /* Yellow when recording */
+        }
+
+        textarea {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <textarea id="realtime-log" cols="100" rows="20"></textarea><br>
+    <input id="realtime-message-input" type="text" size="100"><br>
+    <input id="realtime-message-submit" type="button" value="Send"><br>
+
+    <!-- Mic and Stop buttons -->
+    <button id="mic-start" title="Start Recording">
+        <i class="fas fa-microphone"></i>
+    </button>
+    <button id="mic-stop" title="Stop Recording" style="display: none;">
+        <i class="fas fa-stop"></i>
+    </button>
+
+    {{ room_name|json_script:"room-name" }}
+
+    <script>
+        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+
+        const realtimeSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/realtime/'
+            + roomName
+            + '/'
+        );
+
+        realtimeSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            document.querySelector('#realtime-log').value += (data.message + '\n');
+        };
+
+        realtimeSocket.onclose = function(e) {
+            console.error('Realtime socket closed unexpectedly');
+        };
+
+        document.querySelector('#realtime-message-input').focus();
+        document.querySelector('#realtime-message-input').onkeyup = function(e) {
+            if (e.key === 'Enter') {  // enter, return
+                document.querySelector('#realtime-message-submit').click();
+            }
+        };
+
+        document.querySelector('#realtime-message-submit').onclick = function(e) {
+            const messageInputDom = document.querySelector('#realtime-message-input');
+            const message = messageInputDom.value;
+            realtimeSocket.send(JSON.stringify({
+                'command':'save',
+                'message': message
+            }));
+            messageInputDom.value = '';
+        };
+
+        // Mic button logic
+        let mediaRecorder;
+        document.querySelector('#mic-start').onclick = function() {
+            navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,     // Enable echo cancellation
+                    noiseSuppression: true,     // Enable noise suppression
+                    autoGainControl: true       // Enable automatic gain control
+                }
+            })
+            .then(function(stream) {
+                // Initialize the MediaRecorder with the stream
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = function(e) {
+                    console.log(e.data);
+                    if (e.data.size > 0) {
+                        // Send audio data as a Blob to WebSocket
+                        realtimeSocket.send(e.data);
+                        // realtimeSocket.send(JSON.stringify({
+                        //     'command': 'mic_stream',
+                        //     'data': e.data
+                        // }));
+
+                       
+                    }
+                };
+                mediaRecorder.onstart = function() {
+                    console.log("Recording started");
+                    document.body.classList.add('recording'); // Change background color
+                    document.getElementById('mic-start').style.display = 'none'; // Hide start button
+                    document.getElementById('mic-stop').style.display = 'inline-block'; // Show stop button
+                };
+
+                mediaRecorder.onstop = function() {
+                    console.log("Recording stopped");
+                    document.body.classList.remove('recording'); // Reset background color
+                    document.getElementById('mic-stop').style.display = 'none'; // Hide stop button
+                    document.getElementById('mic-start').style.display = 'inline-block'; // Show start button
+                };
+
+                // Start recording
+                mediaRecorder.start(100); // Send audio chunks every 100 milliseconds
+            })
+            .catch(function(err) {
+                console.error('The following error occurred: ' + err);
+            });
+        };
+
+        // Stop recording
+        document.querySelector('#mic-stop').onclick = function() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+        };
+    </script>
+</body>
+</html>
