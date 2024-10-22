@@ -7,17 +7,18 @@ import google.generativeai as genai
 from django.db import models
 from django.conf import settings
 from datetime import datetime
+import os
 
 class Product(models.Model):
-    name = models.CharField(max_length=255, blank=True, null=True)
+    name      = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    category = models.CharField(max_length=100, blank=True, null=True)
-    
+    price     = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    category  = models.CharField(max_length=100, blank=True, null=True)
+    audio_key = models.CharField(max_length=100, blank=True, null=True)
     # Fields for storing different pronunciation variations
     english_keywords = models.TextField(default="", blank=True, null=True)
     spanish_keywords = models.TextField(default="", blank=True, null=True)
-
+ 
     # Image fields
     image = models.ImageField(upload_to='product_images/', blank=True, null=True)
     thumbnail = models.ImageField(upload_to='product_thumbnails/', blank=True, null=True)
@@ -79,6 +80,46 @@ class Product(models.Model):
 
         super().save(*args, **kwargs)
 
+        self.save_to_json()
+
+    def save_to_json(self):
+        # Define the JSON file path
+        json_file_path = os.path.join(settings.MEDIA_ROOT, 'product.json')
+
+        # Prepare the data to save
+        product_data = {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'price': str(self.price),
+            'category': self.category,
+            'english_keywords': self.english_keywords,
+            'spanish_keywords': self.spanish_keywords,
+            'other_info': [{"name": info.name, "value": info.value} for info in self.infos.all()]  # Collect other info
+        }
+
+        # Load existing products from the JSON file, if it exists
+        products = []
+        if os.path.exists(json_file_path):
+            with open(json_file_path, 'r') as json_file:
+                products = json.load(json_file)
+
+        # Check if the product already exists in the list
+        existing_product = next((item for item in products if item['id'] == self.id), None)
+
+        if existing_product:
+            # Update existing product
+            existing_product.update(product_data)
+        else:
+            # Add new product
+            products.append(product_data)
+
+        # Write the updated list back to the JSON file
+        with open(json_file_path, 'w') as json_file:
+            json.dump(products, json_file, indent=4)
+
+    
+
     def make_thumbnail(self, image, size=(300, 300)):
         """
         Generate a thumbnail for the image
@@ -96,6 +137,11 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+
+class OtherInfo(models.Model):
+    product = models.ForeignKey(Product, related_name='infos', on_delete=models.CASCADE)
+    name = models.CharField(max_length=255,blank=True,null=True)
+    value= models.CharField(max_length=255,blank=True,null=True)
 
 class Session(models.Model):
     session_id = models.CharField(max_length=255, unique=True)
@@ -144,3 +190,17 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} (Line Total: {self.line_total})"
+
+class ModelConfigurations(models.Model):
+    name               = models.CharField(max_length=255,blank=True,null=True)
+    system_instruction = models.TextField(blank=True,null=True)
+    temperature        = models.CharField(max_length=255,blank=True,null=True)
+    top_p              = models.CharField(max_length=255,blank=True,null=True)
+    top_k              = models.CharField(max_length=255,blank=True,null=True)
+    max_output_tokens  = models.CharField(max_length=255,blank=True,null=True)
+    response_mime_type = models.CharField(max_length=255,blank=True,null=True)
+
+    def __str__(self):
+        return self.name
+
+    

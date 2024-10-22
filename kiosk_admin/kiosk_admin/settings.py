@@ -41,6 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'base',
+    'website',
+    'metrics',
+    'django_ace',
     
 ]
 

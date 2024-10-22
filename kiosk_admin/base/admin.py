@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Session, Cart, CartItem, Product
+from .models import *
 
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
@@ -20,12 +20,16 @@ class SessionAdmin(admin.ModelAdmin):
     
     end_session.short_description = "Mark selected sessions as ended"
 
+class OtherInfoInline(admin.TabularInline):
+    model = OtherInfo
+    extra = 1  # Number of empty fields to display for adding new items
+    can_delete = True  # Allows cart items to be deleted from the inline
+
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 1  # Number of empty fields to display for adding new items
     readonly_fields = ('line_total',)
     fields = ('product', 'quantity', 'instructions', 'line_total')
-    can_delete = True  # Allows cart items to be deleted from the inline
 
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
@@ -42,6 +46,7 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description', 'category')
     readonly_fields = ('get_english_keywords', 'get_spanish_keywords', 'preview_image', 'preview_thumbnail')
     fields = ('name', 'description', 'price', 'category', 'image', 'thumbnail', 'get_english_keywords', 'get_spanish_keywords')
+    inlines = [OtherInfoInline]
 
     def get_english_keywords(self, obj):
         """
@@ -82,3 +87,4 @@ class ProductAdmin(admin.ModelAdmin):
 
 # Register the Product model with the customized admin class
 admin.site.register(Product, ProductAdmin)
+admin.site.register(ModelConfigurations)

@@ -69,7 +69,7 @@
 
         document.querySelector('#realtime-message-input').focus();
         document.querySelector('#realtime-message-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
+            if (e.key === 'Enter') {
                 document.querySelector('#realtime-message-submit').click();
             }
         };
@@ -78,7 +78,7 @@
             const messageInputDom = document.querySelector('#realtime-message-input');
             const message = messageInputDom.value;
             realtimeSocket.send(JSON.stringify({
-                'command':'save',
+                'command': 'save',
                 'message': message
             }));
             messageInputDom.value = '';
@@ -89,9 +89,9 @@
         document.querySelector('#mic-start').onclick = function() {
             navigator.mediaDevices.getUserMedia({
                 audio: {
-                    echoCancellation: true,     // Enable echo cancellation
-                    noiseSuppression: true,     // Enable noise suppression
-                    autoGainControl: true       // Enable automatic gain control
+                    echoCancellation: true,    // Enable echo cancellation
+                    noiseSuppression: true,    // Enable noise suppression
+                    autoGainControl: true      // Enable automatic gain control
                 }
             })
             .then(function(stream) {
@@ -99,18 +99,12 @@
                 mediaRecorder = new MediaRecorder(stream);
 
                 mediaRecorder.ondataavailable = function(e) {
-                    console.log(e.data);
                     if (e.data.size > 0) {
-                        // Send audio data as a Blob to WebSocket
+                        // Send the audio data (Blob) to the WebSocket
                         realtimeSocket.send(e.data);
-                        // realtimeSocket.send(JSON.stringify({
-                        //     'command': 'mic_stream',
-                        //     'data': e.data
-                        // }));
-
-                       
                     }
                 };
+
                 mediaRecorder.onstart = function() {
                     console.log("Recording started");
                     document.body.classList.add('recording'); // Change background color
@@ -125,8 +119,8 @@
                     document.getElementById('mic-start').style.display = 'inline-block'; // Show start button
                 };
 
-                // Start recording
-                mediaRecorder.start(100); // Send audio chunks every 100 milliseconds
+                // Start recording and send audio in 100ms chunks
+                mediaRecorder.start(100);
             })
             .catch(function(err) {
                 console.error('The following error occurred: ' + err);

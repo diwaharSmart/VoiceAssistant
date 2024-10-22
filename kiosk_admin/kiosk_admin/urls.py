@@ -19,9 +19,13 @@ from django.conf.urls.static import static
 from django.urls import path, include
 from django.contrib import admin
 
+admin.site.site_header = "Kiosk Admin"
+admin.site.site_title = "Kiosk Admin Portal"
+admin.site.index_title = "Welcome to Kiosk"
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('realtime/', include("realtime.urls")),
+    path('', include("website.urls")),
 ]
 
 # Serve static and media files during development

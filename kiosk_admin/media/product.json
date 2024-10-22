@@ -1,0 +1,17 @@
+[
+    {
+        "id": 5,
+        "name": "Burger",
+        "description": "sfff",
+        "price": "53.00",
+        "category": "diet food",
+        "english_keywords": "{\"input\": \"Burger\", \"languageCode\": \"en\", \"variations\": [\"Burger\", \"Buger\", \"Bogout\", \"Bugol\", \"Bogo\", \"Burga\", \"Burgah\", \"Burgee\", \"Burgle\", \"Burguer\", \"Burgar\", \"Banger\", \"Beefy\", \"Patty\", \"Sandwhich\", \"Sandwiched\", \"Burgerlicious\", \"Burgermeister\", \"Burger King\", \"Burger Queen\"]}\n",
+        "spanish_keywords": "{\"input\": \"Burger\", \"languageCode\": \"es\", \"variations\": [\"Burguer\", \"B\u00farguer\", \"Hamburguesa\", \"Hamburguesita\", \"Hambu\", \"Hambur\", \"Burga\", \"Burguerita\", \"Burger\", \"Burguers\", \"Hamburguesas\", \"Hamburguesitas\", \"Hambues\", \"Hamburgesas\", \"Burguersitas\", \"Burgueras\", \"Hamburguers\", \"Hamburguesones\", \"Hamburguesotas\", \"Hamburguesitas\"]}\n",
+        "other_info": [
+            {
+                "name": "Calories",
+                "value": "100 Cal"
+            }
+        ]
+    }
+]
