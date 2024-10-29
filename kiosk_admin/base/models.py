@@ -74,10 +74,6 @@ class Product(models.Model):
         if not self.spanish_keywords:
             self.spanish_keywords = self.get_pronunciations_from_genai(self.name, 'es')
 
-        # Generate thumbnail if image is provided and thumbnail is empty
-        if self.image and not self.thumbnail:
-            self.thumbnail = self.make_thumbnail(self.image)
-
         super().save(*args, **kwargs)
 
         self.save_to_json()
@@ -117,22 +113,6 @@ class Product(models.Model):
         # Write the updated list back to the JSON file
         with open(json_file_path, 'w') as json_file:
             json.dump(products, json_file, indent=4)
-
-    
-
-    def make_thumbnail(self, image, size=(300, 300)):
-        """
-        Generate a thumbnail for the image
-        """
-        img = Image.open(image)
-        img.convert('RGB')
-        img.thumbnail(size)
-        
-        thumb_io = BytesIO()
-        img.save(thumb_io, 'JPEG', quality=85)
-        
-        thumbnail = File(thumb_io, name=image.name)
-        return thumbnail
 
     def __str__(self):
         return self.name
@@ -199,8 +179,40 @@ class ModelConfigurations(models.Model):
     top_k              = models.CharField(max_length=255,blank=True,null=True)
     max_output_tokens  = models.CharField(max_length=255,blank=True,null=True)
     response_mime_type = models.CharField(max_length=255,blank=True,null=True)
+    welcome_text = models.TextField(blank=True,null=True)
+    post_welcome_text = models.TextField(blank=True,null=True)
 
     def __str__(self):
         return self.name
 
-    
+
+class LLMModel(models.Model):
+    name         =    models.CharField(max_length=255,blank=True,null=True)
+    other_info   =    models.TextField(blank=True,null=True)
+
+    def __str__(self):
+        return self.name
+
+class LLMModelConfig(models.Model):
+    model   =    models.ForeignKey(LLMModel, on_delete=models.CASCADE,)
+    key     =    models.CharField(max_length=255,blank=True,null=True)
+    value   =    models.TextField(blank=True,null=True)
+
+    def __str__(self):
+        return self.key
+
+
+class Configuration(models.Model):
+    key     =    models.CharField(max_length=255,unique=True,blank=True,null=True)
+    value   =    models.TextField(blank=True,null=True)
+
+    def __str__(self):
+        return self.key
+
+class Setting(models.Model):
+    model = models.ForeignKey(LLMModel, on_delete=models.CASCADE, blank=True, null=True, related_name="settings_model")
+    speech_to_text = models.ForeignKey(LLMModel, on_delete=models.CASCADE, blank=True, null=True, related_name="settings_speech_to_text")
+    text_to_speech = models.ForeignKey(LLMModel, on_delete=models.CASCADE, blank=True, null=True, related_name="settings_text_to_speech")
+
+    def __unicode__(self):
+        return str(self.id)

@@ -22,9 +22,16 @@ class JsonSerializerAdmin(admin.ModelAdmin):
     class Meta:
         model = JsonSerializer
 
+class CommonUtilsSerializerAdmin(admin.ModelAdmin):
+    form = CommonUtilsSerializerForm
+    # inlines = [CascadeStyleInline,JavaScriptInline]
+    class Meta:
+        model = CommonUtils
+
 admin.site.register(Page,PageAdmin)
 admin.site.register(Widget,WidgetAdmin)
 admin.site.register(JsonSerializer,JsonSerializerAdmin)
+admin.site.register(CommonUtils,CommonUtilsSerializerAdmin)
 admin.site.register(Website)
 admin.site.register(File)
 

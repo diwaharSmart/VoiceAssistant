@@ -14,7 +14,13 @@ from base.models import *
 from asgiref.sync import sync_to_async, async_to_sync
 import boto3
 from realtime.serializer import *
-
+import av
+import io
+import pyaudio
+from pydub import AudioSegment
+import noisereduce as nr
+from realtime.stt import *
+import whisper
 session = boto3.Session(
     aws_access_key_id='AKIAZQ3DUFIK26LNH35Z',
     aws_secret_access_key='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',
@@ -30,20 +36,26 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = f"realtime_{self.room_name}"
-        self.vosk_model = vosk.Model("/home/anonymous/VoiceAssistant/vosk-model-en-us-daanzu-20200905")
+        self.vosk_model = vosk.Model("/home/anonymous/VoiceAssistant/kiosk_admin/models/vosk-model-small-en-us-0.15")
         self.recognizer = vosk.KaldiRecognizer(self.vosk_model, 16000)
         self.audio_buffer = []
         self.chat_history = []
         self.gemini_audio_history = []
         self.audio_counter = 0
-        self.available_languages = ["en","es"]
-        self.language = "english"
+        self.available_languages = ["en-us","es-us"]
+        self.language = "en-us"
+        self.set_language = False
         self.session, self.cart = await self.get_or_create_session_and_cart()
         self.configuration = await self.get_model_configuration("GenAI")
         system_instructions = self.configuration.system_instruction.replace("$product_info",str(self.load_product_data()))
         system_instructions = system_instructions.replace("$language",self.language)
         self.instructions = system_instructions
-        # print(self.instructions)
+        self.welcome_text = self.configuration.welcome_text
+        self.post_welcome_text = self.configuration.post_welcome_text
+        self.language_voice_map = {"en-us": "Joanna", "es-us": "Lupe"}
+
+
+
         self.generation_config = {
             "temperature": float(self.configuration.temperature),
             "top_p": float(self.configuration.top_p),
@@ -51,6 +63,7 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
             "max_output_tokens": int(self.configuration.max_output_tokens),
             "response_mime_type": self.configuration.response_mime_type
             }
+
         self.genai_model = genai.GenerativeModel(
                             model_name="gemini-1.5-flash",
                             generation_config=self.generation_config,
@@ -59,6 +72,18 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
+        self.chat_history.append({
+                        "role": "model",
+                        "parts": [
+                            self.welcome_text,
+                        ],
+        })
+        await self.convert_text_to_speech(self.welcome_text)
+
+    async def audio_data(self):
+        while True:
+            bytes_data = await self.receive()
+            yield bytes_data
 
     async def disconnect(self, close_code):
         # await self.update_session_end()
@@ -116,6 +141,7 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
                     cart_item_data = {
                         "id": item.id,
                         "quantity": item.quantity,
+                        "quantity": item.instructions,
                         "line_total": str(item.line_total),
                         "product": product_data
                     }
@@ -130,18 +156,15 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
             print(f"Error sending cart data: {str(e)}")
             await self.send(text_data=json.dumps({"error": "Failed to retrieve cart data"}))
 
-        
-
     async def receive(self, bytes_data=None, text_data=None):
+        
         if bytes_data:
-            # print(bytes_data)
-            
             if self.recognizer.AcceptWaveform(bytes_data):
                 result = self.recognizer.Result()
                 result_json = json.loads(result)
                 transcript = result_json.get('text', '')
-                print("Audio to Text :", transcript)
-                if transcript not in [None, '','huh',"oh"]:
+                # print("Audio to Text :", transcript)
+                if transcript and transcript not in ["huh", "oh", "yeah", "causes"] and (len(transcript.split()) > 1 or transcript in ['halo','hii',"hai","english","spanish","hi", "hello", "ok", "no", "yes"]):
                     user_input = {
                         "role": "user",
                         "parts": transcript,
@@ -168,11 +191,14 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
                    
                     try:
                         speech_audio = await self.convert_text_to_speech(json.loads(response.text)[0]["speech_response"])
-                        await self.send(text_data=json.dumps({"command":"audio_data","bytes":speech_audio}))
                     except:
                         pass
             else:
                 partial_result = self.recognizer.PartialResult()
+                partial_result=json.loads(partial_result)
+                if len(partial_result["partial"].split())>1:
+                    # print(partial_result["partial"].split())
+                    await self.send(text_data=json.dumps({"command": "stop_audio"}))
                     
         elif text_data:
             text_data_json = json.loads(text_data)
@@ -213,15 +239,18 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
         """Convert text to speech using Amazon Polly."""
         try:
             response = polly_client.synthesize_speech(
-                Text=text,
+                Text=f"<speak><prosody rate='110%'>{text}</prosody></speak>",  # Adjust rate as needed
                 OutputFormat='mp3',
                 VoiceId='Joanna',
-                Engine='neural'
+                Engine='standard',
+                TextType='ssml'
             )
             audio_stream = response.get('AudioStream')
             if audio_stream:
                 audio_bytes = audio_stream.read()
-                return audio_bytes
+                await self.send(text_data=json.dumps({"command": "stop_audio"}))
+                await self.send(text_data=json.dumps({"command": "play_audio", "audio_bytes": base64.b64encode(audio_bytes).decode('utf-8')}))
+                
         except Exception as e:
             print(f"Error converting text to speech: {str(e)}")
             return None
@@ -260,9 +289,13 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
             with open(json_file_path, 'r') as json_file:
                 product_data = json.load(json_file)
                 return product_data
+
         except FileNotFoundError:
             print("Product JSON file not found.")
             return []
+            
         except json.JSONDecodeError:
             print("Error decoding JSON from the product file.")
             return []
+
+

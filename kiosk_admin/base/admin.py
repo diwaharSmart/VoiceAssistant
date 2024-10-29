@@ -31,6 +31,14 @@ class CartItemInline(admin.TabularInline):
     readonly_fields = ('line_total',)
     fields = ('product', 'quantity', 'instructions', 'line_total')
 
+class LLMModelConfigInline(admin.TabularInline):
+    model = LLMModelConfig
+    extra = 0
+
+class LLMModelAdmin(admin.ModelAdmin):
+    inlines = [LLMModelConfigInline]
+
+
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
     list_display = ('session', 'total')
@@ -40,29 +48,17 @@ class CartAdmin(admin.ModelAdmin):
     # Adding the Tabular Inline for Cart Items
     inlines = [CartItemInline]
 
+class ConfigurationAdmin(admin.ModelAdmin):
+    model = Configuration
+    list_display = ['key', 'value']
+
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('preview_thumbnail','name', 'category', 'price', 'get_english_keywords', 'get_spanish_keywords')
+    list_display = ('preview_thumbnail','name', 'category', 'price', 'english_keywords', 'spanish_keywords')
     list_filter = ('category',)
     search_fields = ('name', 'description', 'category')
-    readonly_fields = ('get_english_keywords', 'get_spanish_keywords', 'preview_image', 'preview_thumbnail')
-    fields = ('name', 'description', 'price', 'category', 'image', 'thumbnail', 'get_english_keywords', 'get_spanish_keywords')
+    readonly_fields = ('preview_image', 'preview_thumbnail')
+    fields = ('name', 'description', 'price', 'category', 'image', 'thumbnail', 'english_keywords', 'spanish_keywords','audio_key')
     inlines = [OtherInfoInline]
-
-    def get_english_keywords(self, obj):
-        """
-        Display English pronunciation variations as a comma-separated list in the admin panel.
-        """
-        return obj.english_keywords
-
-    get_english_keywords.short_description = 'English Pronunciations'
-
-    def get_spanish_keywords(self, obj):
-        """
-        Display Spanish pronunciation variations as a comma-separated list in the admin panel.
-        """
-        return obj.spanish_keywords
-
-    get_spanish_keywords.short_description = 'Spanish Pronunciations'
 
     def preview_image(self, obj):
         """
@@ -88,3 +84,6 @@ class ProductAdmin(admin.ModelAdmin):
 # Register the Product model with the customized admin class
 admin.site.register(Product, ProductAdmin)
 admin.site.register(ModelConfigurations)
+admin.site.register(Setting)
+admin.site.register(LLMModel,LLMModelAdmin)
+admin.site.register(Configuration, ConfigurationAdmin)

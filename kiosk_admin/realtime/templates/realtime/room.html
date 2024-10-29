@@ -1,138 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <title>Realtime Room</title>
-    <!-- Include FontAwesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Quality PCM Audio Streaming</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.5.0/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        /* Style for the rounded mic button */
-        #mic-start, #mic-stop {
-            border: none;
+        body, html {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: green;
+            transition: background-color 0.3s ease;
+        }
+        .call-icon {
+            font-size: 100px;
             color: white;
-            background-color: #4CAF50;
-            border-radius: 50%;
-            padding: 15px;
-            font-size: 24px;
             cursor: pointer;
-            margin: 10px;
-        }
-
-        #mic-stop {
-            background-color: #f44336; /* Red for stop */
-        }
-
-        /* Style the background when recording starts */
-        body.recording {
-            background-color: #ffeb3b; /* Yellow when recording */
-        }
-
-        textarea {
-            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
-    <textarea id="realtime-log" cols="100" rows="20"></textarea><br>
-    <input id="realtime-message-input" type="text" size="100"><br>
-    <input id="realtime-message-submit" type="button" value="Send"><br>
 
-    <!-- Mic and Stop buttons -->
-    <button id="mic-start" title="Start Recording">
-        <i class="fas fa-microphone"></i>
-    </button>
-    <button id="mic-stop" title="Stop Recording" style="display: none;">
-        <i class="fas fa-stop"></i>
-    </button>
+<div class="text-center">
+    <i id="call-icon" class="bi bi-telephone-fill call-icon"></i>
+</div>
+{{ room_name|json_script:"room-name" }}
+<script>
+    let audioContext;
+    let ws;
+    let processor;
+    let source;
+    let recording = false;
+    let audioSource;
+    const roomName = JSON.parse(document.getElementById('room-name').textContent);
 
-    {{ room_name|json_script:"room-name" }}
-
-    <script>
-        const roomName = JSON.parse(document.getElementById('room-name').textContent);
-
-        const realtimeSocket = new WebSocket(
-            'ws://'
+    document.getElementById('call-icon').addEventListener('click', async () => {
+        if (!recording) {
+            ws = new WebSocket('ws://'
             + window.location.host
             + '/ws/realtime/'
             + roomName
-            + '/'
-        );
-
-        realtimeSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            document.querySelector('#realtime-log').value += (data.message + '\n');
-        };
-
-        realtimeSocket.onclose = function(e) {
-            console.error('Realtime socket closed unexpectedly');
-        };
-
-        document.querySelector('#realtime-message-input').focus();
-        document.querySelector('#realtime-message-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {
-                document.querySelector('#realtime-message-submit').click();
+            + '/');
+            ws.onopen = () => {
+                console.log("WebSocket connection opened");
+                document.body.style.backgroundColor = 'red';
+                recording = true;
             }
-        };
+            ws.onmessage = async (event) => {
+                const message = JSON.parse(event.data);
 
-        document.querySelector('#realtime-message-submit').onclick = function(e) {
-            const messageInputDom = document.querySelector('#realtime-message-input');
-            const message = messageInputDom.value;
-            realtimeSocket.send(JSON.stringify({
-                'command': 'save',
-                'message': message
-            }));
-            messageInputDom.value = '';
-        };
+                if (message.command === "stop_audio" && audioSource) {
+                    // Stop current audio playback if there's ongoing audio
+                    audioSource.stop();
+                } else if (message.command === "play_audio" && message.audio_bytes) {
+                    // Decode base64 audio and play
+                    const audioData = Uint8Array.from(atob(message.audio_bytes), c => c.charCodeAt(0));
+                    const audioBuffer = await audioContext.decodeAudioData(audioData.buffer);
 
-        // Mic button logic
-        let mediaRecorder;
-        document.querySelector('#mic-start').onclick = function() {
-            navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,    // Enable echo cancellation
-                    noiseSuppression: true,    // Enable noise suppression
-                    autoGainControl: true      // Enable automatic gain control
-                }
-            })
-            .then(function(stream) {
-                // Initialize the MediaRecorder with the stream
-                mediaRecorder = new MediaRecorder(stream);
-
-                mediaRecorder.ondataavailable = function(e) {
-                    if (e.data.size > 0) {
-                        // Send the audio data (Blob) to the WebSocket
-                        realtimeSocket.send(e.data);
+                    // Stop previous audio if it exists
+                    if (audioSource) {
+                        audioSource.stop();
                     }
-                };
 
-                mediaRecorder.onstart = function() {
-                    console.log("Recording started");
-                    document.body.classList.add('recording'); // Change background color
-                    document.getElementById('mic-start').style.display = 'none'; // Hide start button
-                    document.getElementById('mic-stop').style.display = 'inline-block'; // Show stop button
-                };
-
-                mediaRecorder.onstop = function() {
-                    console.log("Recording stopped");
-                    document.body.classList.remove('recording'); // Reset background color
-                    document.getElementById('mic-stop').style.display = 'none'; // Hide stop button
-                    document.getElementById('mic-start').style.display = 'inline-block'; // Show start button
-                };
-
-                // Start recording and send audio in 100ms chunks
-                mediaRecorder.start(100);
-            })
-            .catch(function(err) {
-                console.error('The following error occurred: ' + err);
-            });
-        };
-
-        // Stop recording
-        document.querySelector('#mic-stop').onclick = function() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
+                    // Create a new source and play the audio
+                    audioSource = audioContext.createBufferSource();
+                    audioSource.buffer = audioBuffer;
+                    audioSource.connect(audioContext.destination);
+                    audioSource.start();
+                }
+            };
+            ws.onerror = () => {
+              document.body.style.backgroundColor = 'green';
+              if (processor) processor.disconnect();
+              if (source) source.disconnect();
+              recording = false;
             }
-        };
-    </script>
+            ws.onclose = () => {
+                document.body.style.backgroundColor = 'green';
+                if (processor) processor.disconnect();
+                if (source) source.disconnect();
+                recording = false;
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: { ideal: true },
+                    noiseSuppression: { ideal: true },
+                    autoGainControl: true,
+                    sampleRate: 16000,
+                    channelCount: 1
+                }
+            });
+
+            // Set up audio context for PCM processing
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            source = audioContext.createMediaStreamSource(stream);
+            processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+            // PCM Processing
+            processor.onaudioprocess = (event) => {
+                let inputBuffer = event.inputBuffer.getChannelData(0); // Get audio data from the first channel
+                let buffer = new Int16Array(inputBuffer.length);
+
+                // Convert from Float32 to Int16 PCM
+                for (let i = 0; i < inputBuffer.length; i++) {
+                    buffer[i] = Math.max(-1, Math.min(1, inputBuffer[i])) * 32767;
+                }
+
+                // Send PCM data over WebSocket
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(buffer);
+                    console.log("Sent PCM data chunk");
+                }
+            };
+
+            // Connect nodes
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+        } else {
+            // Stop recording
+            if (processor) processor.disconnect();
+            if (source) source.disconnect();
+            if (ws) ws.close();
+
+            document.body.style.backgroundColor = 'green';
+            recording = false;
+        }
+    });
+</script>
+
 </body>
 </html>

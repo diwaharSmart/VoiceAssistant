@@ -2,7 +2,7 @@
     {
         "id": 5,
         "name": "Burger",
-        "description": "sfff",
+        "description": "Ingridents : Chicken Patty, Ketchup, Tomato, Lettuce, Buns",
         "price": "53.00",
         "category": "diet food",
         "english_keywords": "{\"input\": \"Burger\", \"languageCode\": \"en\", \"variations\": [\"Burger\", \"Buger\", \"Bogout\", \"Bugol\", \"Bogo\", \"Burga\", \"Burgah\", \"Burgee\", \"Burgle\", \"Burguer\", \"Burgar\", \"Banger\", \"Beefy\", \"Patty\", \"Sandwhich\", \"Sandwiched\", \"Burgerlicious\", \"Burgermeister\", \"Burger King\", \"Burger Queen\"]}\n",
@@ -11,6 +11,10 @@
             {
                 "name": "Calories",
                 "value": "100 Cal"
+            },
+            {
+                "name": "Ingridents",
+                "value": "Chicken Patty, Ketchup, Tomato, Lettuce, Buns"
             }
         ]
     }

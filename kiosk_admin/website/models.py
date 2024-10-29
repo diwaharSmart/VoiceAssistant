@@ -118,3 +118,12 @@ class File(models.Model):
 
     def __str__(self):
         return self.data.url
+
+class CommonUtils(models.Model):
+    content     = models.TextField(
+        default="#Buge",
+    )
+    version     = models.DecimalField(default=0.1,max_digits=10,decimal_places=1)
+
+    def __unicode__(self):
+        return self.id

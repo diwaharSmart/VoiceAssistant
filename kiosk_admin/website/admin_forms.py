@@ -34,6 +34,21 @@ class JsonSerializerForm(forms.ModelForm):
             ),
         }
 
+class CommonUtilsSerializerForm(forms.ModelForm):
+    class Meta:
+        model = CommonUtils
+        fields = '__all__'
+        widgets = {
+            'content': AceWidget(
+                mode='python',
+                theme='github',  # Choose a theme
+                width='100%',
+                height='500px',
+                wordwrap=True,
+                showinvisibles=False,
+            ),
+        }
+
 class PageForm(forms.ModelForm):
     class Meta:
         model = Page
