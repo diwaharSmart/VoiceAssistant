@@ -54,22 +54,24 @@
                 const message = JSON.parse(event.data);
 
                 if (message.command === "stop_audio" && audioSource) {
-                    // Stop current audio playback if there's ongoing audio
                     audioSource.stop();
                 } else if (message.command === "play_audio" && message.audio_bytes) {
-                    // Decode base64 audio and play
                     const audioData = Uint8Array.from(atob(message.audio_bytes), c => c.charCodeAt(0));
                     const audioBuffer = await audioContext.decodeAudioData(audioData.buffer);
 
-                    // Stop previous audio if it exists
                     if (audioSource) {
                         audioSource.stop();
                     }
 
-                    // Create a new source and play the audio
                     audioSource = audioContext.createBufferSource();
                     audioSource.buffer = audioBuffer;
-                    audioSource.connect(audioContext.destination);
+
+                    // Create a silent gain node for playback audio to avoid feedback
+                    const playbackGain = audioContext.createGain();
+                    playbackGain.gain.value = 1; // Control volume if needed, or set to 1 for normal playback
+
+                    // Connect audio source through silent gain to destination
+                    audioSource.connect(playbackGain).connect(audioContext.destination);
                     audioSource.start();
                 }
             };
@@ -100,7 +102,13 @@
             audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
             source = audioContext.createMediaStreamSource(stream);
             processor = audioContext.createScriptProcessor(4096, 1, 1);
+            // Create a silent gain node
+            const silentGain = audioContext.createGain();
+            silentGain.gain.value = 0; // Mute output to avoid feedback
 
+            // Connect processor to silent gain to keep audio flow active
+            processor.connect(silentGain);
+            silentGain.connect(audioContext.destination)
             // PCM Processing
             processor.onaudioprocess = (event) => {
                 let inputBuffer = event.inputBuffer.getChannelData(0); // Get audio data from the first channel
@@ -120,7 +128,7 @@
 
             // Connect nodes
             source.connect(processor);
-            processor.connect(audioContext.destination);
+            // processor.connect(audioContext.destination);
         } else {
             // Stop recording
             if (processor) processor.disconnect();

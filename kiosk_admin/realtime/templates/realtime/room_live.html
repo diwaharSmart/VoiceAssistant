@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Audio Streaming with Queue</title>
+</head>
+<body>
+  <h1>Real-Time Audio Streaming with Queue</h1>
+  <button id="connectButton">Connect to WebSocket</button>
+  <button id="startButton" disabled>Start Streaming</button>
+  <button id="stopButton" disabled>Stop Streaming</button>
+  <p id="status">Status: Not Connected</p>
+  <audio id="audioPlayer" controls autoplay></audio>
+  {{ room_name|json_script:"room-name" }}
+  <script>
+    const connectButton = document.getElementById('connectButton');
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const statusText = document.getElementById('status');
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    let ws;
+    let mediaRecorder;
+    let audioQueue = [];  // Queue for storing audio blobs
+
+    // Connect WebSocket
+    connectButton.addEventListener('click', () => {
+    const roomName = JSON.parse(document.getElementById('room-name').textContent);
+    ws = new WebSocket('ws://'
+        + window.location.host
+        + '/ws/realtime/'
+        + roomName
+        + '/');
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        statusText.textContent = 'Status: Connected to WebSocket';
+        connectButton.disabled = true;
+        startButton.disabled = false;
+      };
+
+      // Receive audio data and push it into the audio queue
+      ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          const blob = new Blob([event.data], { type: 'audio/wav' });
+          audioQueue.push(blob);  // Add audio data to the queue
+
+          // If the player is not already playing, start playing the next audio
+          if (audioPlayer.paused && audioQueue.length > 0) {
+            playNextAudio();
+          }
+        } else {
+          console.log('Received non-audio message:', event.data);
+        }
+      };
+
+      ws.onclose = () => {
+        statusText.textContent = 'Status: WebSocket Disconnected';
+        connectButton.disabled = false;
+        startButton.disabled = true;
+        stopButton.disabled = true;
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        statusText.textContent = 'Status: Error';
+        connectButton.disabled = false;
+        startButton.disabled = true;
+        stopButton.disabled = true;
+      };
+    });
+
+    // Play the next audio in the queue
+    function playNextAudio() {
+      if (audioQueue.length > 0) {
+        const audioBlob = audioQueue.shift();  // Get the first audio in the queue
+        const audioUrl = URL.createObjectURL(audioBlob);  // Create URL for Blob
+        audioPlayer.src = audioUrl;
+
+        // Play the audio and listen for when it finishes
+        audioPlayer.play().then(() => {
+          console.log('Playing audio...');
+        }).catch((error) => {
+          console.error('Error playing audio:', error);
+        });
+
+        // When audio finishes, play the next in the queue
+        audioPlayer.onended = () => {
+          playNextAudio();
+        };
+      }
+    }
+
+    // Start streaming audio from the client's microphone
+    startButton.addEventListener('click', async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+          ws.send(event.data);  // Send audio chunk to server
+        }
+      };
+
+      mediaRecorder.start(100); // Send audio every 100ms
+
+      statusText.textContent = 'Status: Streaming Audio';
+      startButton.disabled = true;
+      stopButton.disabled = false;
+    });
+
+    // Stop streaming
+    stopButton.addEventListener('click', () => {
+      if (mediaRecorder) {
+        mediaRecorder.stop();
+      }
+      if (ws) {
+        ws.close();
+      }
+      statusText.textContent = 'Status: Stopped Streaming and Disconnected';
+      startButton.disabled = true;
+      stopButton.disabled = true;
+      connectButton.disabled = false;
+    });
+  </script>
+</body>
+</html>
